@@ -1,0 +1,40 @@
+{
+  "testnet": {
+    "31337": [
+      {
+        "name": "DrypProxy",
+        "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+      },
+      {
+        "name": "Dryp",
+        "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+      },
+      {
+        "name": "TreasuryProxy",
+        "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+      },
+      {
+        "name": "Treasury",
+        "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+      }
+    ],
+    "11155111": [
+      {
+        "name": "DrypProxy",
+        "address": "0x0e060d7ec50fC55A0C7BCd383b80F7806Cf1ecFb"
+      },
+      {
+        "name": "Dryp",
+        "address": "0x7E73AD8315458F261665b7aED1424CA66EF0128C"
+      },
+      {
+        "name": "TreasuryProxy",
+        "address": "0x07c87Bb4a55d0f8e4C3Ad344023f4bd3a0E6AA5b"
+      },
+      {
+        "name": "Treasury",
+        "address": "0x02f7d12af633B53F413311811fE1E7d69CF713Ac"
+      }
+    ]
+  }
+}

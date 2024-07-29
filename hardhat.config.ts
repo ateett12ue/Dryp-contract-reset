@@ -18,7 +18,16 @@ const config: HardhatUserConfig = {
     deploy: "src/deploy",
     sources: "contracts",
   },
-  solidity: "0.8.3",
+  solidity: {
+    compilers: [
+    {
+      version: "0.8.20",
+      settings: {
+        optimizer: { enabled: true, runs:200},
+        viaIR: true,
+      },
+    }]
+  },
   networks: {
     sepolia: {
       url: process.env.SEPOLIA_URL || "",

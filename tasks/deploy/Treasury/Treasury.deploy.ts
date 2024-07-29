@@ -39,19 +39,18 @@ task(DEPLOY_TREASURY_CONTRACT)
     
     let drypToken;
     for (let i = 0; i < deployments[env][network].length; i++) {
-      if (deployments[env][network][i].name === "Dryp") {
+      if (deployments[env][network][i].name === "DrypProxy") {
         drypToken = deployments[env][network][i].address;
         break;
       }
     }
-    const drypPool = drypToken;
+    const drypPool = "0xfcbf957f663682b503d44d52e844fe38e2798b4e";
     const factory = await _hre.ethers.getContractFactory("Treasury");
     const factoryProxy = await _hre.upgrades.deployProxy(
       factory,
       [drypToken,
         drypPool,
         treasuryManager,
-        EXCHANGE_TOKEN["11155111"].usdc.address,
         EXCHANGE_TOKEN["11155111"].usdt.address,],
       {
         initializer: "initialize",

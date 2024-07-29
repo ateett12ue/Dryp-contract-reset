@@ -6,15 +6,10 @@ pragma solidity ^0.8.0;
  * @author Ateet Tiwari
  */
 
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { UtilMath } from "../utils/UtilMath.sol";
+import {IPancakeswapV2PositionManager} from "../interfaces/IPancakeSwap.sol";
+import "./TreasuryCore.sol";
 
-import "./TreasuryStorage.sol";
-
-contract TreasuryController is TreasuryStorage {
-    using SafeERC20 for IERC20;
-    using UtilMath for uint256;
-
+contract TreasuryController is TreasuryInitializer {
     /***************************************
                  Configuration
     ****************************************/
@@ -23,93 +18,138 @@ contract TreasuryController is TreasuryStorage {
      * @notice Set address of initial treasury setup
      */
 
-    function startTreasury(address[] calldata _assets, uint8[] calldata _decimals, uint16[] calldata _allocatPercentage, uint256[] calldata _price) external onlyRole(TREASURY_MANAGER) {
-        require(treasuryStarted == false, "treasury already started");
-        
+    function startTreasury(address[] calldata _assets, uint8[] calldata _decimals, uint16[] calldata _allocatPercentage, uint32[] calldata _price, uint256[] calldata _amounts) external payable onlyRole(TREASURY_MANAGER) nonReentrant {
+        require(_treasuryStarted == false, "Already started");
         uint256 assetCount = _assets.length;
+        require(
+                assetCount == _decimals.length &&
+                assetCount == _allocatPercentage.length &&
+                assetCount == _price.length &&
+                assetCount == _amounts.length,
+                "Array lengths mismatch"
+        );
         for (uint256 i = 0; i < assetCount; ++i) {
-            _addAsset(_assets[i], _decimals[i], _allocatPercentage[i], _price[i]);
+            require(_amounts[i] > 0, "Zero asset not allowed");
+            require(!_redeemBasketAssets[_assets[i]].isSupported, "Asset already supported in RB");
+            require(!_unredeemBasketAssets[_assets[i]].isSupported, "Asset already supported in URB");
+            
+            _addAssetInRedeemBasket(_assets[i], _decimals[i], _allocatPercentage[i], _price[i], _amounts[i]);
+            _addAssetInUnRedeemBasket(_assets[i], _decimals[i], _allocatPercentage[i], _price[i], 0);
+            _allAssets.push(_assets[i]);
+            emit AssetAdded(_assets[i]);
         }
-        treasuryStarted = true;
-    }
-
-    function updateDrypAddress(address newDrypAddress) external onlyRole(TREASURY_MANAGER) returns(bool)
-    {
-        _dryp = Dryp(newDrypAddress);
-        return true;
-    }
-
-    function updateDrypPoolAddress(address newDrypPool) external onlyRole(TREASURY_MANAGER) returns(bool)
-    {
-        _drypPool = newDrypPool;
-        return true;
+        _treasuryStarted = true;
     }
 
     /***************************************
                 Asset Config
     ****************************************/
-
     /**
      * @notice Add a supported asset to the contract, i.e. one that can be
      *         to mint OTokens.
      * @param _asset Address of asset
      */
-    function addAsset(address _asset, uint8 _decimals, uint16 _allocatedPercentage, uint256 _price)
+    function addAsset(address _asset, uint8 _decimals, uint16 _allocatedPercentage, uint32 _price, uint256 _amount)
         external
+        payable
         onlyRole(TREASURY_MANAGER)
     {
-        _addAsset(_asset, _decimals, _allocatedPercentage, _price);
-    }
-
-    function _addAsset(address _asset, uint8 _decimals, uint16 _allocatedPercentage, uint256 _price)
-        internal
-    {
-        require(!redeemBasketAssets[_asset].isSupported, "Asset already supported in Redeem Basket");
-        require(!unredeemBasketAssets[_asset].isSupported, "Asset already supported in unRedeem Basket");
-
-        redeemBasketAssets[_asset] = TreasuryAsset({
-            isSupported: true,
-            decimals: _decimals,
-            allotatedPercentange: _allocatedPercentage, // will be overridden in _cacheDecimals
-            priceInUsdt: _price
-        });
-
-        unredeemBasketAssets[_asset] = TreasuryAsset({
-            isSupported: true,
-            decimals: _decimals,
-            allotatedPercentange: _allocatedPercentage, // will be overridden in _cacheDecimals
-            priceInUsdt: _price
-        });
-
-        _cacheDecimals(_asset);
-        allAssets.push(_asset);
-
+        require(
+            _treasuryStarted == true,
+            "treasury initialized"
+        );
+        require(!_redeemBasketAssets[_asset].isSupported, "Asset already supported");
+        require(!_unredeemBasketAssets[_asset].isSupported, "Asset already supported");
+        _addAssetInRedeemBasket(_asset, _decimals, _allocatedPercentage, _price, _amount);
+        _addAssetInUnRedeemBasket(_asset, _decimals, _allocatedPercentage, _price, _amount);
+        _allAssets.push(_asset);
         emit AssetAdded(_asset);
     }
 
-    function addMintingToken(address _asset,string memory _symbol, uint8 _decimals, uint256 _price)
+    function updateAssetToRedeemBasket(address _asset,bool _isSupported, uint8 _decimals, uint16 _allocatedPercentage, uint32 _price)
+        external
+        onlyRole(TREASURY_MANAGER)
+    {
+        require(
+            _treasuryStarted == true,
+            "treasury not initialized"
+        );
+        require(_redeemBasketAssets[_asset].isSupported, "Asset Not Supported");
+        TreasuryAsset storage asset = _redeemBasketAssets[_asset];
+        asset.isSupported = _isSupported;
+        asset.decimals = _decimals;
+        asset.allotatedPercentange = _allocatedPercentage;
+        asset.priceInUsdt = _price; 
+        emit AssetUpdated(_asset, _isSupported, _decimals, _allocatedPercentage, _price);
+    }
+
+    function updateAssetToUnRedeemBasket(address _asset,bool _isSupported, uint8 _decimals, uint16 _allocatedPercentage, uint32 _price)
+        external
+        onlyRole(TREASURY_MANAGER)
+    {
+        require(
+            _treasuryStarted == true,
+            "treasury not initialized"
+        );
+        require(_unredeemBasketAssets[_asset].isSupported, "Asset Not Supported");
+        TreasuryAsset storage asset = _unredeemBasketAssets[_asset];
+        asset.isSupported = _isSupported;
+        asset.decimals = _decimals;
+        asset.allotatedPercentange = _allocatedPercentage;
+        asset.priceInUsdt = _price;
+        emit AssetUpdated(_asset, _isSupported, _decimals, _allocatedPercentage, _price);
+    }
+
+    function _addAssetInRedeemBasket(address _asset, uint8 _decimals, uint16 _allocatedPercentage, uint32 _price, uint256 _amount)
+        internal
+    {
+
+        require(_amount > 0, "amount zero");
+        require(IERC20(_asset).transferFrom(msg.sender, address(this), _amount), "Transfer failed");
+        _redeemBasketAssets[_asset] = TreasuryAsset({
+            isSupported: true,
+            decimals: _decimals,
+            allotatedPercentange: _allocatedPercentage,
+            priceInUsdt: _price,
+            amount: _amount
+        });
+    }
+
+    function _addAssetInUnRedeemBasket(address _asset, uint8 _decimals, uint16 _allocatedPercentage, uint32 _price, uint256 _amount)
+        internal
+    {
+        require(IERC20(_asset).transferFrom(msg.sender, address(this), _amount), "Transfer failed");
+        _unredeemBasketAssets[_asset] = TreasuryAsset({
+            isSupported: true,
+            decimals: _decimals,
+            allotatedPercentange: _allocatedPercentage, // will be overridden in _cacheDecimals
+            priceInUsdt: _price,
+            amount: _amount
+        });
+    }
+
+    function addMintingToken(address _asset,string memory _symbol, uint8 _decimals, uint32 _price)
         external
         onlyRole(TREASURY_MANAGER)
     {
         _addMintingAsset(_asset, _decimals, _symbol, _price);
     }
 
-    function _addMintingAsset(address _asset, uint8 _decimals, string memory _symbol, uint256 _price)
+    function _addMintingAsset(address _asset, uint8 _decimals, string memory _symbol, uint32 _price)
         internal
     {
-        require(!mintTokens[_asset].isSupported, "Asset already supported as Exchange Token");
+        require(!_mintTokens[_asset].isSupported, "Asset already supported");
 
-        mintTokens[_asset] = ExchangeToken({
+        _mintTokens[_asset] = ExchangeToken({
             isSupported: true,
             allowed: true,
             megaPool: address(0),
             decimals: _decimals,
-            maxAllowed: 0,
+            maxAllowed: 10000000000,
             symbol: _symbol,
             priceInUsdt: _price
         });
 
-        _cacheDecimals(_asset);
         emit MintAssetAdded(_asset);
     }
 
@@ -122,14 +162,12 @@ contract TreasuryController is TreasuryStorage {
     }
 
     function _removeMintingAsset(address _asset) internal {
-        require(mintTokens[_asset].isSupported, "Asset not supported for minting");
+        require(_mintTokens[_asset].isSupported, "Asset not supported");
         require(
             IERC20(_asset).balanceOf(address(this)) <= 1e13,
             "Treasury still holds asset"
         );
-
-        delete mintTokens[_asset];
-
+        delete _mintTokens[_asset];
         emit MintAssetRemoved(_asset);
     }
 
@@ -142,17 +180,16 @@ contract TreasuryController is TreasuryStorage {
     }
 
     function _removeAsset(address _asset) internal {
-        require(redeemBasketAssets[_asset].isSupported, "Asset not supported in redeem basket");
-        require(unredeemBasketAssets[_asset].isSupported, "Asset not supported in unredeem basket");
+        require(_redeemBasketAssets[_asset].isSupported, "Asset not supported");
+        require(_unredeemBasketAssets[_asset].isSupported, "Asset not supported");
         require(
             IERC20(_asset).balanceOf(address(this)) <= 1e13,
             "Treasury still holds asset"
         );
-
-        uint256 assetsCount = allAssets.length;
-        uint256 assetIndex = assetsCount; // initialize at invaid index
-        for (uint256 i = 0; i < assetsCount; ++i) {
-            if (allAssets[i] == _asset) {
+        uint assetsCount = _allAssets.length;
+        uint assetIndex = assetsCount; // initialize at invaid index
+        for (uint i = 0; i < assetsCount; ++i) {
+            if (_allAssets[i] == _asset) {
                 assetIndex = i;
                 break;
             }
@@ -164,54 +201,43 @@ contract TreasuryController is TreasuryStorage {
         // not exist in `allAssets`.
 
         // Update allAssets array
-        allAssets[assetIndex] = allAssets[assetsCount - 1];
-        allAssets.pop();
+        _allAssets[assetIndex] = _allAssets[assetsCount - 1];
+        _allAssets.pop();
         // Remove asset from storage
-        delete redeemBasketAssets[_asset];
-        delete unredeemBasketAssets[_asset];
-
+        delete _redeemBasketAssets[_asset];
+        delete _unredeemBasketAssets[_asset];
         emit AssetRemoved(_asset);
     }
 
-    function depositToRedeemableBasket(address[] calldata _assets,
-        uint256[] calldata _amounts) external onlyRole(TREASURY_MANAGER) {
-        _depositToRedeemableBasket(_assets, _amounts);
+    function depositToRedeemableBasket(address _asset, uint256 _amount) external payable onlyRole(TREASURY_MANAGER) {
+        require(msg.value > _amount, "require send amount");
+        _depositToRedeemableBasket(_asset, _amount);
     }
-
 
     function _depositToRedeemableBasket(
-        address[] calldata _assets,
-        uint256[] calldata _amounts
+        address _asset,
+        uint256 _amount
     ) internal {
-        
-        require(_assets.length == _amounts.length, "Parameter length mismatch");
-
-        uint256 assetCount = _assets.length;
-        for (uint256 i = 0; i < assetCount; ++i) {
-            require( redeemBasketAssets[_assets[i]].isSupported, "Invalid to token");
-            address assetAddr = _assets[i];
-            // Send required amount of funds to the strategy
-            IERC20(assetAddr).safeTransferFrom(treasury_manager, address(this), _amounts[i]);
-        }
+        require(_redeemBasketAssets[_asset].isSupported, "Invalid token");
+        require(IERC20(_asset).transferFrom(msg.sender, address(this),_amount), "Transfer failed");
+        TreasuryAsset storage asset = _redeemBasketAssets[_asset];
+        asset.amount += _amount;
     }
 
-    function depositToUnRedeemableBasket(address[] calldata _assets,
-        uint256[] calldata _amounts) external onlyRole(TREASURY_MANAGER) {
-        _depositToUnRedeemableBasket(_assets, _amounts);
+    function depositToUnRedeemableBasket(address _asset,
+        uint256 _amount) external payable onlyRole(TREASURY_MANAGER) {
+            require(msg.value > _amount, "require send amount");
+        _depositToUnRedeemableBasket(_asset, _amount);
     }
 
     function _depositToUnRedeemableBasket(
-        address[] calldata _assets,
-        uint256[] calldata _amounts
+        address _asset,
+        uint256 _amount
     ) internal {
-        require(_assets.length == _amounts.length, "Parameter length mismatch");
-        uint256 assetCount = _assets.length;
-        for (uint256 i = 0; i < assetCount; ++i) {
-            require( unredeemBasketAssets[_assets[i]].isSupported, "Invalid token");
-            address assetAddr = _assets[i];
-            // Send required amount of funds to the strategy
-            IERC20(assetAddr).safeTransferFrom(treasury_manager, address(this), _amounts[i]);
-        }
+        require(_unredeemBasketAssets[_asset].isSupported, "Invalid token");
+        require(IERC20(_asset).transferFrom(msg.sender, address(this),_amount), "Transfer failed");
+        TreasuryAsset storage asset = _unredeemBasketAssets[_asset];
+        asset.amount += _amount;
     }
 
     /**
@@ -233,8 +259,11 @@ contract TreasuryController is TreasuryStorage {
         address _asset,
         uint256 _amount
     )internal {
-         require(unredeemBasketAssets[_asset].isSupported, "Invalid token");
-         IERC20(_asset).safeTransferFrom(address(this), treasury_manager, _amount);
+         require(_unredeemBasketAssets[_asset].isSupported, "Invalid token");
+         require(_unredeemBasketAssets[_asset].amount > _amount, "Invalid token");
+         TreasuryAsset storage asset = _unredeemBasketAssets[_asset];
+         IERC20(_asset).transferFrom(address(this), _treasury_manager, _amount);
+         asset.amount -= _amount;
     }
 
     function withdrawFromredeemableBaseket(
@@ -251,72 +280,22 @@ contract TreasuryController is TreasuryStorage {
         address _asset,
         uint256 _amount
     )internal {
-         require(redeemBasketAssets[_asset].isSupported, "Invalid token");
-         IERC20(_asset).safeTransferFrom(address(this), treasury_manager, _amount);
-    }
-
-    /***************************************
-                    Pause
-    ****************************************/
-
-    /**
-     * @notice Set the deposit paused flag to true to prevent rebasing.
-     */
-    function pauseRebase() external onlyRole(TREASURY_MANAGER) {
-        rebasePaused = true;
-        emit RebasePaused();
-    }
-
-    /**
-     * @notice Set the deposit paused flag to true to allow rebasing.
-     */
-    function unpauseRebase() external onlyRole(TREASURY_MANAGER) {
-        rebasePaused = false;
-        emit RebaseUnpaused();
-    }
-
-    /**
-     * @notice Set the deposit paused flag to true to prevent capital movement.
-     */
-    function pauseCapital() external onlyRole(TREASURY_MANAGER) {
-        capitalPaused = true;
-        emit CapitalPaused();
-    }
-
-    /**
-     * @notice Set the deposit paused flag to false to enable capital movement.
-     */
-    function unpauseCapital() external onlyRole(TREASURY_MANAGER) {
-        capitalPaused = false;
-        emit CapitalUnpaused();
+        require(_redeemBasketAssets[_asset].isSupported, "Invalid token");
+        require(_redeemBasketAssets[_asset].amount > _amount, "Invalid token");
+        TreasuryAsset storage asset = _redeemBasketAssets[_asset];
+        IERC20(_asset).transferFrom(address(this), _treasury_manager, _amount);
+        asset.amount -= _amount;
+         
     }
 
     /***************************************
                     Utils
     ****************************************/
 
-    /**
-     * @notice Transfer token to governor. Intended for recovering tokens stuck in
-     *      contract, i.e. mistaken sends.
-     * @param _asset Address for the asset
-     * @param _amount Amount of the asset to transfer
-     */
-    function transferToken(address _asset, uint256 _amount)
-        external
-        onlyRole(TREASURY_MANAGER)
-    {
-        _transferToken(_asset, _amount);
-    }
-
     function _transferToken(address _asset, uint256 _amount)
         internal
     {
-        require(!redeemBasketAssets[_asset].isSupported, "Only unsupported assets");
-        IERC20(_asset).safeTransfer(treasury_manager, _amount);
-    }
-
-    function _treasury_manager() external view returns (address) {
-        return treasury_manager;
+        IERC20(_asset).transfer(_treasury_manager, _amount);
     }
 
     /***************************************
@@ -330,29 +309,16 @@ contract TreasuryController is TreasuryStorage {
         external
         onlyRole(TREASURY_MANAGER)
     {
-        uint256 assetLeng= allAssets.length;
-        for (uint256 i = 0; i < assetLeng; ++i) {
-            if(unredeemBasketAssets[allAssets[i]].isSupported)
+        uint256 assetLeng= _allAssets.length;
+        for (uint32 i = 0; i < assetLeng; ++i) {
+            if(_unredeemBasketAssets[_allAssets[i]].isSupported)
             {
-                if(IERC20(allAssets[i]).balanceOf(address(this)) > 0)
+                uint ercAmount = IERC20(_allAssets[i]).balanceOf(address(this));
+                if(ercAmount > 0)
                 {
-                    _transferToken(allAssets[i], IERC20(allAssets[i]).balanceOf(address(this)));
+                    IERC20(_allAssets[i]).transfer(_treasury_manager,  ercAmount);
                 }
             }
         }
-    }
-
-    /***************************************
-                    Utils
-    ****************************************/
-
-    function _cacheDecimals(address token) internal {
-        TreasuryAsset storage tokenAsset = redeemBasketAssets[token];
-        if (tokenAsset.decimals != 0) {
-            return;
-        }
-        uint8 decimals = tokenAsset.decimals;
-        require(decimals >= 6 && decimals <= 18, "Unexpected precision");
-        tokenAsset.decimals = decimals;
     }
 }

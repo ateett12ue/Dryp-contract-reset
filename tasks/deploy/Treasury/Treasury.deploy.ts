@@ -134,7 +134,7 @@ task(INITIALIZE_TREASURY_CONTRACT).setAction(async function (
   const rpc = process.env.SEPOLIA_URL;
   console.log(`rpc`, rpc);
   const provider = new ethers.JsonRpcProvider(rpc)
-  console.log(`process.env.PRIVATEKEY`, process.env.PRIVATE_KEY);
+
   const signer = new ethers.Wallet(String(process.env.PRIVATE_KEY), provider);
   
   let assets: Array<string> = []

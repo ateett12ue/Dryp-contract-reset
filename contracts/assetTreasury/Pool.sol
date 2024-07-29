@@ -5,7 +5,7 @@ import {IPancakeswapV2PositionManager} from "../interfaces/IPancakeSwap.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 contract PancakeswapHelpers is Initializable {
     IPancakeswapV2PositionManager
-        internal _drypPoolPositionManager;
+        public _drypPoolPositionManager;
     function __Pool_init(address __nonFungiblePositionManager) internal onlyInitializing {
         _drypPoolPositionManager = IPancakeswapV2PositionManager(
                     __nonFungiblePositionManager

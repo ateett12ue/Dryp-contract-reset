@@ -93,7 +93,7 @@ bytes32 constant adminImplPosition =
     /// eg mint, redeem, allocate, mint/burn for rebalancing
     bool public capitalPaused;
     /// @dev Address of the Dryp token.
-    Dryp internal _dryp;
+    Dryp public _dryp;
     bytes32 internal constant TREASURY_MANAGER = keccak256("TREASURY_MANAGER_1");
     /**
      * @notice set the implementation for the admin, this needs to be in a base class else we cannot set it

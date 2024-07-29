@@ -58,7 +58,7 @@ contract Dryp is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, ERC2
     address public admin;
     uint256 public totalLockedSupply;
     
-
+    address[] public whitelisted;
     mapping(address => TokenCredit) private _redeemCreditBalancesUpdated;
     mapping(address => TokenCredit) private _nonredeemCreditBalancesUpdated;
     mapping(address => uint256) private _creditBalances;
@@ -66,6 +66,18 @@ contract Dryp is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, ERC2
     // constructor() {
     //     _disableInitializers();
     // }
+
+    modifier onlyAllowedContracts() {
+        bool isAllowed = false;
+        for (uint256 i = 0; i < whitelisted.length; i++) {
+            if (whitelisted[i] == msg.sender) {
+                isAllowed = true;
+                break;
+            }
+        }
+        require(isAllowed, "Caller is not an allowed contract");
+        _;
+    }
     
     function initialize(
         string calldata _nameArg,
@@ -121,7 +133,21 @@ contract Dryp is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, ERC2
         return totalLockedSupply;
     }
 
-    function mint(address to, uint256 amount) public onlyTreasuryManager {
+    function whiteListContract(address _contract) external onlyTreasuryManager {
+        whitelisted.push(_contract);
+    }
+
+    function removeWhitelistContract(address _contract) external onlyOwner {
+        for (uint256 i = 0; i < whitelisted.length; i++) {
+            if (whitelisted[i] == _contract) {
+                whitelisted[i] = whitelisted[whitelisted.length - 1];
+                whitelisted.pop();
+                break;
+            }
+        }
+    }
+
+    function mint(address to, uint256 amount) public onlyAllowedContracts {
         _mint(to, amount);
     }
 
@@ -136,10 +162,13 @@ contract Dryp is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, ERC2
         super._beforeTokenTransfer(from, to, amount);
     }
 
+    // Function to add allowed contracts (restricted to the contract owner)
+    
+
     /**
      * @dev Burns tokens, decreasing totalSupply.
      */
-    function burn(address account, uint256 amount) external onlyTreasuryManager {
+    function burn(address account, uint256 amount) external onlyAllowedContracts {
         _burn(account, amount);
     }
 
@@ -220,14 +249,6 @@ contract Dryp is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, ERC2
         returns(uint256)
     {
        return _redeemCreditBalance;
-    }
-
-    function getNonRedeemCredit(address newAddress)
-        public
-        view
-        returns(uint256)
-    {
-       return _nonredeemCreditBalance;
     }
 
     function updateRedeemCredit(uint256 newValue)

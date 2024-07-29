@@ -8,17 +8,33 @@
       {
         "name": "Dryp",
         "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+      },
+      {
+        "name": "TreasuryProxy",
+        "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+      },
+      {
+        "name": "Treasury",
+        "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3"
       }
     ],
     "11155111": [
       {
         "name": "DrypProxy",
-        "address": "0x0e060d7ec50fC55A0C7BCd383b80F7806Cf1ecFb"
+        "address": "0xA4ea74A4880cF488D2361cbB6f065d2030F0bB7E"
       },
       {
         "name": "Dryp",
-        "address": "0x7E73AD8315458F261665b7aED1424CA66EF0128C"
-      }  
+        "address": "0xB505af3cDf20d6736600403E161FA242b606D7AB"
+      },
+      {
+        "name": "TreasuryProxy",
+        "address": "0x2321362De9777fA03591b3eBDa28E589C1d8cb29"
+      },
+      {
+        "name": "Treasury",
+        "address": "0xE3Cb392e4b2b4fE9953E1c1DeD8Dfd3Ba5733e38"
+      }
     ]
   }
 }

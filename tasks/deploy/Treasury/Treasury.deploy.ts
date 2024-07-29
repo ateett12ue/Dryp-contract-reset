@@ -37,14 +37,14 @@ task(DEPLOY_TREASURY_CONTRACT)
     const treasuryManager = "0xBec33ce33afdAF5604CCDF2c4b575238C5FBD23d";
     const deployments = getDeployments(contractType) as IDeploymentAdapters;
     
-    let drypToken;
-    for (let i = 0; i < deployments[env][network].length; i++) {
-      if (deployments[env][network][i].name === "DrypProxy") {
-        drypToken = deployments[env][network][i].address;
-        break;
-      }
-    }
-    const drypPool = "0xfcbf957f663682b503d44d52e844fe38e2798b4e";
+    let drypToken = "0xA4ea74A4880cF488D2361cbB6f065d2030F0bB7E";
+    // for (let i = 0; i < deployments[env][network].length; i++) {
+    //   if (deployments[env][network][i].name === "DrypProxy") {
+    //     drypToken = deployments[env][network][i].address;
+    //     break;
+    //   }
+    // }
+    const drypPool = "0xe5a2F24fd643A7d1a64406e3E688055692DEFDa2";
     const factory = await _hre.ethers.getContractFactory("Treasury");
     const factoryProxy = await _hre.upgrades.deployProxy(
       factory,

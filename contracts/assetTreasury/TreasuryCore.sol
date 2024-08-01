@@ -36,7 +36,7 @@ contract TreasuryCore is TreasuryInitializer {
             uint256 totalAssetLocked = IERC20(assetAddress).balanceOf(address(this));
             if(usdtDecimal != assetDecimal)
             {
-                uint unitPriceInUsdt = _toUnitsPrice(assetDecimal, totalAssetLocked);
+                uint unitPriceInUsdt = _toUnitsPrice(assetDecimal, usdtDecimal, totalAssetLocked);
                 totalLocked += unitPriceInUsdt*_mintTokens[assetAddress].priceInUsdt;
             }
             else
@@ -62,7 +62,7 @@ contract TreasuryCore is TreasuryInitializer {
             uint256 totalAssetLocked = IERC20(assetAddress).balanceOf(address(this));
             if(usdtDecimal != assetDecimal)
             {
-                uint unitPriceInUsdt = _toUnitsPrice(assetDecimal, totalAssetLocked);
+                uint unitPriceInUsdt = _toUnitsPrice(assetDecimal, usdtDecimal, totalAssetLocked);
                 totalLocked += unitPriceInUsdt*_mintTokens[assetAddress].priceInUsdt;
             }
             else
@@ -88,7 +88,7 @@ contract TreasuryCore is TreasuryInitializer {
             uint256 totalAssetLocked = IERC20(mintingAddress).balanceOf(address(this));
             if(usdtDecimal != assetDecimal)
             {
-                uint unitPriceInUsdt = _toUnitsPrice(assetDecimal, totalAssetLocked);
+                uint unitPriceInUsdt = _toUnitsPrice(assetDecimal, usdtDecimal, totalAssetLocked);
                 totalLocked += unitPriceInUsdt*_mintTokens[mintingAddress].priceInUsdt;
             }
             else
@@ -205,7 +205,7 @@ contract TreasuryCore is TreasuryInitializer {
         onlyWhenTreasuryInitialized
         returns (uint256[] memory)
     {
-        uint256 usdtRedeemValue = _getDrypDollar(_amount, _usdt);
+        uint256 usdtRedeemValue = _getDrypDollar(_amount, address(_dryp));
         return _calculateRedeemOutputs(usdtRedeemValue);
     }
 
@@ -222,15 +222,16 @@ contract TreasuryCore is TreasuryInitializer {
     {
         uint256 assetCount = _allAssets.length;
         outputs = new uint256[](assetCount);
-        uint256 totalUsdtValue = 0;
+        uint256 amountInUsdt = _amount/10**6;
+        uint256 totalUsdtValueLocked = 0;
         // Calculate assets balances and decimals once,
         // for a large gas savings.
         for (uint32 i = 0; i < assetCount; ++i) {
             address assetAddr = _allAssets[i];
             TreasuryAsset memory asset = _redeemBasketAssets[assetAddr];
             if (asset.isSupported) {
-                uint256 totalValueLocked = asset.amount;
-                totalUsdtValue += totalValueLocked * asset.priceInUsdt;
+                uint256 totalValueLocked = asset.amount*asset.priceInUsdt/(10**asset.decimals);
+                totalUsdtValueLocked = totalValueLocked + totalUsdtValueLocked;
             }
         }
         // Calculate totalOutputRatio
@@ -238,8 +239,8 @@ contract TreasuryCore is TreasuryInitializer {
             address assetAddress = _allAssets[i];
             TreasuryAsset memory asset = _redeemBasketAssets[assetAddress];
             if (asset.isSupported) {
-                uint256 assetValueInUsdt = (asset.priceInUsdt * asset.allotatedPercentange) / 100;
-                uint256 amountToRedeem = (_amount * assetValueInUsdt) / totalUsdtValue;
+                uint256 assetShareInUsdt = amountInUsdt*asset.allotatedPercentange/100;
+                uint256 amountToRedeem = assetShareInUsdt*(10**asset.decimals)/asset.priceInUsdt;
                 outputs[i] = amountToRedeem;
             }
         }
@@ -250,16 +251,15 @@ contract TreasuryCore is TreasuryInitializer {
                     Utils
     ****************************************/
 
-    function _toUnitsPrice( uint256 _decimal, uint256 _amount)
+    function _toUnitsPrice( uint256 _decimalin, uint256 _decimalOut, uint256 _amount)
         public
         pure
         returns (uint256)
     {
-        uint256 usdtDecimal = 6;
-        if (_decimal == usdtDecimal) {
+        if (_decimalin == _decimalOut) {
             return _amount;
         } else{
-           uint256 _rawAdjusted= _amount.scaleBy(usdtDecimal, _decimal);
+           uint256 _rawAdjusted= _amount.scaleBy(_decimalOut, _decimalin);
            return _rawAdjusted;
         }
     }
@@ -268,7 +268,7 @@ contract TreasuryCore is TreasuryInitializer {
      * @notice This is a catch all for all functions not declared in core
      */
     fallback() external {
-        bytes32 slot = adminImplPosition;
+        bytes32 slot = bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
         // solhint-disable-next-line no-inline-assembly
         assembly {
             // Copy msg.data. We take full control of memory in this inline assembly

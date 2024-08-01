@@ -150,7 +150,7 @@ task(WHITELIST_TREASURY_CONTRACT).setAction(async function (
   // }
 
   console.log(`contractAddress`, contractAddress);
-  const treasury = "0x2321362De9777fA03591b3eBDa28E589C1d8cb29"
+  const treasury = "0x4c6ADD5Ed63564C148934FD87Baee6B961982DdE"
   const contract = new ethers.Contract(contractAddress,
     TokenAbi, signer);
 

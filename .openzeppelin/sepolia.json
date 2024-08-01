@@ -20,6 +20,11 @@
       "address": "0x2321362De9777fA03591b3eBDa28E589C1d8cb29",
       "txHash": "0x95b81b8aca746fc592f806b0e5527d96d1a7eda49d6f77a105b4935dd1433de1",
       "kind": "transparent"
+    },
+    {
+      "address": "0x4c6ADD5Ed63564C148934FD87Baee6B961982DdE",
+      "txHash": "0xb453f0cd9adf0ddc7f216116bac4db420d4f589f0a9d50ad7c121ed274c1c964",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -1304,6 +1309,321 @@
             "numberOfBytes": "64"
           },
           "t_struct(TreasuryAsset)7146_storage": {
+            "label": "struct TreasuryStorage.TreasuryAsset",
+            "members": [
+              {
+                "label": "isSupported",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "decimals",
+                "type": "t_uint8",
+                "offset": 1,
+                "slot": "0"
+              },
+              {
+                "label": "allotatedPercentange",
+                "type": "t_uint16",
+                "offset": 2,
+                "slot": "0"
+              },
+              {
+                "label": "priceInUsdt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_uint16": {
+            "label": "uint16",
+            "numberOfBytes": "2"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint32": {
+            "label": "uint32",
+            "numberOfBytes": "4"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "a89306d04b89babc6522b6e4097e3fc6223e9470f9887d4a9b0f8bf7d3da5513": {
+      "address": "0xA00d87AbfeAD0444583e7cddBe15608eDc792BD0",
+      "txHash": "0x9a43508ca993f5bef5fdd39aca8ae0822a02799b36903df7e28e77342532715a",
+      "layout": {
+        "solcVersion": "0.8.20",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "_roles",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)1757_storage)",
+            "contract": "AccessControl",
+            "src": "@openzeppelin/contracts/access/AccessControl.sol:56"
+          },
+          {
+            "label": "_status",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_uint256",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:88"
+          },
+          {
+            "label": "_drypPoolPositionManager",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_contract(IPancakeswapV2PositionManager)7365",
+            "contract": "PancakeswapHelpers",
+            "src": "contracts/assetTreasury/Pool.sol:7"
+          },
+          {
+            "label": "_usdt",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_address",
+            "contract": "TreasuryStorage",
+            "src": "contracts/assetTreasury/TreasuryStorage.sol:66"
+          },
+          {
+            "label": "_treasury_manager",
+            "offset": 0,
+            "slot": "54",
+            "type": "t_address",
+            "contract": "TreasuryStorage",
+            "src": "contracts/assetTreasury/TreasuryStorage.sol:67"
+          },
+          {
+            "label": "_redeemBasketAssets",
+            "offset": 0,
+            "slot": "55",
+            "type": "t_mapping(t_address,t_struct(TreasuryAsset)7200_storage)",
+            "contract": "TreasuryStorage",
+            "src": "contracts/assetTreasury/TreasuryStorage.sol:70"
+          },
+          {
+            "label": "_unredeemBasketAssets",
+            "offset": 0,
+            "slot": "56",
+            "type": "t_mapping(t_address,t_struct(TreasuryAsset)7200_storage)",
+            "contract": "TreasuryStorage",
+            "src": "contracts/assetTreasury/TreasuryStorage.sol:73"
+          },
+          {
+            "label": "_mintTokens",
+            "offset": 0,
+            "slot": "57",
+            "type": "t_mapping(t_address,t_struct(ExchangeToken)7189_storage)",
+            "contract": "TreasuryStorage",
+            "src": "contracts/assetTreasury/TreasuryStorage.sol:76"
+          },
+          {
+            "label": "_allAssets",
+            "offset": 0,
+            "slot": "58",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "TreasuryStorage",
+            "src": "contracts/assetTreasury/TreasuryStorage.sol:78"
+          },
+          {
+            "label": "_mintingAssets",
+            "offset": 0,
+            "slot": "59",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "TreasuryStorage",
+            "src": "contracts/assetTreasury/TreasuryStorage.sol:80"
+          },
+          {
+            "label": "_treasuryStarted",
+            "offset": 0,
+            "slot": "60",
+            "type": "t_bool",
+            "contract": "TreasuryStorage",
+            "src": "contracts/assetTreasury/TreasuryStorage.sol:81"
+          },
+          {
+            "label": "rebasePaused",
+            "offset": 1,
+            "slot": "60",
+            "type": "t_bool",
+            "contract": "TreasuryStorage",
+            "src": "contracts/assetTreasury/TreasuryStorage.sol:91"
+          },
+          {
+            "label": "capitalPaused",
+            "offset": 2,
+            "slot": "60",
+            "type": "t_bool",
+            "contract": "TreasuryStorage",
+            "src": "contracts/assetTreasury/TreasuryStorage.sol:94"
+          },
+          {
+            "label": "_dryp",
+            "offset": 3,
+            "slot": "60",
+            "type": "t_contract(Dryp)7974",
+            "contract": "TreasuryStorage",
+            "src": "contracts/assetTreasury/TreasuryStorage.sol:96"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_contract(Dryp)7974": {
+            "label": "contract Dryp",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IPancakeswapV2PositionManager)7365": {
+            "label": "contract IPancakeswapV2PositionManager",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(ExchangeToken)7189_storage)": {
+            "label": "mapping(address => struct TreasuryStorage.ExchangeToken)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(TreasuryAsset)7200_storage)": {
+            "label": "mapping(address => struct TreasuryStorage.TreasuryAsset)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)1757_storage)": {
+            "label": "mapping(bytes32 => struct AccessControl.RoleData)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(ExchangeToken)7189_storage": {
+            "label": "struct TreasuryStorage.ExchangeToken",
+            "members": [
+              {
+                "label": "isSupported",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "allowed",
+                "type": "t_bool",
+                "offset": 1,
+                "slot": "0"
+              },
+              {
+                "label": "megaPool",
+                "type": "t_address",
+                "offset": 2,
+                "slot": "0"
+              },
+              {
+                "label": "decimals",
+                "type": "t_uint8",
+                "offset": 22,
+                "slot": "0"
+              },
+              {
+                "label": "maxAllowed",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "symbol",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "priceInUsdt",
+                "type": "t_uint32",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          },
+          "t_struct(RoleData)1757_storage": {
+            "label": "struct AccessControl.RoleData",
+            "members": [
+              {
+                "label": "members",
+                "type": "t_mapping(t_address,t_bool)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(TreasuryAsset)7200_storage": {
             "label": "struct TreasuryStorage.TreasuryAsset",
             "members": [
               {

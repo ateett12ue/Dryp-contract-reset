@@ -29,11 +29,11 @@
       },
       {
         "name": "TreasuryProxy",
-        "address": "0x2321362De9777fA03591b3eBDa28E589C1d8cb29"
+        "address": "0x4c6ADD5Ed63564C148934FD87Baee6B961982DdE"
       },
       {
         "name": "Treasury",
-        "address": "0xE3Cb392e4b2b4fE9953E1c1DeD8Dfd3Ba5733e38"
+        "address": "0xA00d87AbfeAD0444583e7cddBe15608eDc792BD0"
       }
     ]
   }

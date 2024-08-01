@@ -173,16 +173,16 @@ task(INITIALIZE_TREASURY_CONTRACT).setAction(async function (
     "function allowance(address owner, uint256 spender) public view returns (uint256)"
   ];
 
-  const contractAddress = "0x2321362De9777fA03591b3eBDa28E589C1d8cb29";
-  // const spenderAddress = process.env.OWNER;
-  // for(let i=0; i< assets.length; i++)
-  // {
-  //   const tokenContract = new ethers.Contract(assets[i], approvalAbi, signer);
-  //   const tx = await tokenContract.approve(contractAddress, amounts[i]);
-  //   console.log(`Approval for ${assets[i]} transaction hash: ${tx.hash}`);
-  //   const receipt = await tx.wait();
-  //   console.log("Transaction confirmed", assets[i]);
-  // }
+  const contractAddress = "0x4c6ADD5Ed63564C148934FD87Baee6B961982DdE";
+  const spenderAddress = process.env.OWNER;
+  for(let i=0; i< assets.length; i++)
+  {
+    const tokenContract = new ethers.Contract(assets[i], approvalAbi, signer);
+    const tx = await tokenContract.approve(contractAddress, amounts[i]);
+    console.log(`Approval for ${assets[i]} transaction hash: ${tx.hash}`);
+    const receipt = await tx.wait();
+    console.log("Transaction confirmed", assets[i]);
+  }
 
   console.log(`contractAddress`, contractAddress);
   

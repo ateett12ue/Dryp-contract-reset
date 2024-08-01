@@ -60,8 +60,8 @@ contract TreasuryStorage is Initializable, AccessControl, ReentrancyGuardUpgrade
         uint256 amount;
     }
 
-bytes32 constant adminImplPosition =
-        keccak256("TREASURY_MANAGER");
+    bytes32 public constant IMPLEMENTATION_SLOT = bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
+
 
     address public _usdt;
     address public _treasury_manager;
@@ -95,18 +95,25 @@ bytes32 constant adminImplPosition =
     /// @dev Address of the Dryp token.
     Dryp public _dryp;
     bytes32 internal constant TREASURY_MANAGER = keccak256("TREASURY_MANAGER_1");
-    /**
-     * @notice set the implementation for the admin, this needs to be in a base class else we cannot set it
-     * @param newImpl address of the implementation
-     */
+
+
     function setAdminImpl(address newImpl) external onlyRole(TREASURY_MANAGER) {
-        require(
-            newImpl != address(0),
-            "new implementation is not a contract"
-        );
-        bytes32 position = keccak256("TREASURY_MANAGER_2");
+        require(newImpl != address(0), "new implementation is not a contract");
+        _setImplementation(newImpl);
+    }
+
+    function _setImplementation(address newImpl) private {
+        bytes32 slot = IMPLEMENTATION_SLOT;
         assembly {
-            sstore(position, newImpl)
+            sstore(slot, newImpl)
         }
     }
+
+    function getImplementation() external view returns (address impl) {
+        bytes32 slot = IMPLEMENTATION_SLOT;
+        assembly {
+            impl := sload(slot)
+        }
+    }
+
 }

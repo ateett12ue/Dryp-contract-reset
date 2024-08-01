@@ -9,7 +9,8 @@ import {
   GET_TREASURY_DETAILS,
   MINT_DRYP_WITH_USDT,
   UPDATE_TREASURY_CONTRACT,
-  CALCULATE_REDEMPTION_VALUE
+  CALCULATE_REDEMPTION_VALUE,
+  REDEEM_DRYP
 } from "../../constants";
 import { task } from "hardhat/config";
 import {
@@ -270,7 +271,7 @@ task(GET_TREASURY_DETAILS).setAction(async function (
     console.log("--------------");
   }
 
-  let total = 0;
+  let total = new BigNumber(0);
   const usdtDec = 6;
   console.log("--------------")
   for(let i=0; i< allAssets.length; i++)
@@ -285,15 +286,16 @@ task(GET_TREASURY_DETAILS).setAction(async function (
       if(usdtDec != assetDecimal)
       {
         const unitPriceInUsdt = totalValueLockedInUsdt[i];
-        total += unitPriceInUsdt*redeemConfigA[i][3];
+        console.log("unitPriceInUsdt",redeemConfigA[i][3])
+        total = new BigNumber(unitPriceInUsdt).mul(redeemConfigA[i][3]).plus(total);
       }
       else
       {
         const totalDollarValue = totalAssetLocked[i];
-        total += totalDollarValue;
+        total = new BigNumber(totalDollarValue).plus(total);
       }
     }
-  console.log("total",total)
+  console.log("total",total.toString())
   console.log("--------------")
   console.log("--------------")
 
@@ -332,7 +334,7 @@ task(MINT_DRYP_WITH_USDT).setAction(async function (
   const signer = new ethers.Wallet(String(process.env.PRIVATE_KEY), provider);
   const _recipient = signer.address;
   console.log(`_recipient`, _recipient);
-  const treasury = "0x2321362De9777fA03591b3eBDa28E589C1d8cb29"
+  const treasury = "0x4c6ADD5Ed63564C148934FD87Baee6B961982DdE"
   console.log(`treasury`, treasury);
   const contract = new ethers.Contract(treasury,
     TreasuryAbi, signer);
@@ -345,7 +347,16 @@ task(MINT_DRYP_WITH_USDT).setAction(async function (
 
   const totalValueLockedInRevB = await contract.totalValueLockedInRevenue();
   console.log("total Value Locked In Revenue before", totalValueLockedInRevB)
+  const approvalAbi = [
+    "function approve(address spender, uint256 amount) public returns (bool)",
+    "function allowance(address owner, uint256 spender) public view returns (uint256)"
+  ]; 
+  const tokenContract = new ethers.Contract(_asset, approvalAbi, signer);
+  const ttx = await tokenContract.approve(treasury, _amount);
+  console.log(`Approval for ${_asset} transaction hash: ${ttx.hash}`);
+  const receipt2 = await ttx.wait();
   console.log("--------------")
+
   const tx = await contract.mint(_asset, _amount, _minimumDrypAmount, _recipient);
   console.log(`transaction hash: ${tx.hash}`);
   const receipt = await tx.wait();
@@ -379,7 +390,7 @@ task(CALCULATE_REDEMPTION_VALUE)
     const ethers = _hre.ethers;
     const provider = new ethers.JsonRpcProvider(rpc);
 
-    const treasury = "0x2321362De9777fA03591b3eBDa28E589C1d8cb29"
+    const treasury = "0x4c6ADD5Ed63564C148934FD87Baee6B961982DdE"
     console.log("treasury", treasury)
     const signer = new ethers.Wallet(String(process.env.PRIVATE_KEY), provider);
     const treasuryContract = new ethers.Contract(treasury,
@@ -427,4 +438,45 @@ task(CALCULATE_REDEMPTION_VALUE)
       outputs.push(tokenAmount.toFixed(0).toString());
     });
     console.log("outputs", outputs);
+  });
+
+
+  task(REDEEM_DRYP)
+  .setAction(async function (
+    _taskArguments: TaskArguments,
+    _hre: HardhatRuntimeEnvironment
+  ) {
+    let env = process.env.ENV;
+    if (!env) env = DEFAULT_ENV;
+    const rpc = process.env.SEPOLIA_URL;
+    const ethers = _hre.ethers;
+    const provider = new ethers.JsonRpcProvider(rpc);
+
+    const treasury = "0x4c6ADD5Ed63564C148934FD87Baee6B961982DdE";
+    const dryp = "0xA4ea74A4880cF488D2361cbB6f065d2030F0bB7E";
+
+    const owner = process.env.OWNER;
+    console.log("treasury", treasury)
+    const signer = new ethers.Wallet(String(process.env.PRIVATE_KEY), provider);
+    const treasuryContract = new ethers.Contract(treasury,
+      TreasuryAbi, signer);
+    console.log("treasury", treasury)
+    console.log("-----------------")
+    const approvalAbi = [
+      "function approve(address spender, uint256 amount) public returns (bool)",
+      "function allowance(address owner, uint256 spender) public view returns (uint256)",
+      "function balanceOf(address account) public view returns (uint256)"
+    ]; 
+    const tokenContract = new ethers.Contract(dryp, approvalAbi, signer);
+
+    const tokenBalance = await tokenContract.balanceOf(owner);
+    const x = new BigNumber(tokenBalance).div(10**18).toString()
+    console.log("tokenBalance",tokenBalance);
+    console.log("tokenBalanceInEth",x);
+    console.log("owner",owner);
+    console.log("-----------------");
+    const tx = await treasuryContract.redeemAssets(tokenBalance, owner);
+    console.log(`Redeem Trnx: ${tx.hash}`);
+    const receipt2 = await tx.wait();
+    console.log("--------------")
   });

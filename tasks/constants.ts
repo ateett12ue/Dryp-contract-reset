@@ -17,6 +17,7 @@ export const GET_TREASURY_DETAILS = "GET_TREASURY_DETAILS";
 export const MINT_DRYP_WITH_USDT = "MINT_DRYP_WITH_USDT";
 export const UPDATE_TREASURY_CONTRACT = "UPDATE_TREASURY_CONTRACT";
 export const CALCULATE_REDEMPTION_VALUE = "CALCULATE_REDEMPTION_VALUE";
+export const REDEEM_DRYP = "REDEEM_DRYP";
 export const WNATIVE: { [network: string]: { [chainId: string]: string } } = {
   testnet: {
     "11155111": "0xf550605cb56fbba5c0f0e01174cf4e707ce0c9ca",

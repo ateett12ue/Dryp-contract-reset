@@ -12,17 +12,17 @@ contract PancakeswapHelpers is Initializable {
                 );
     }
 
-    function _getDrypDollar(uint256 inAmount, address from) public view returns(uint256){
-        (uint256 reserve0, uint256 reserve1,) = _drypPoolPositionManager.getReserves();
+    function _getDrypDollar(uint256 inAmount, address from) public view returns(uint256 outAmount){
+        (uint112 reserve0, uint112 reserve1,) = _drypPoolPositionManager.getReserves();
         address token0 = _drypPoolPositionManager.token0();
-        uint outAmount = 0;
-        if(from == token0)
-        {
-            outAmount = _drypPoolPositionManager.quote(inAmount, reserve0, reserve1);
+        uint256 reserve0_256 = uint256(reserve0);
+        uint256 reserve1_256 = uint256(reserve1);
+        if (from == token0) {
+            require(reserve0_256 > 0, "No liquidity for token0");
+            outAmount = (inAmount * reserve1_256) / reserve0_256;
+        } else {
+            require(reserve1_256 > 0, "No liquidity for token1");
+            outAmount = (inAmount * reserve0_256) / reserve1_256;
         }
-        else {
-            outAmount = _drypPoolPositionManager.quote(inAmount, reserve1, reserve0);
-        }
-        return outAmount;
     }
 }

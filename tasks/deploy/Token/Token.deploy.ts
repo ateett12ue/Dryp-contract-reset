@@ -4,6 +4,7 @@ import {
   DEFAULT_ENV,
   DEPLOY_TOKEN_CONTRACT,
   VERIFY_DEPLOY_TOKEN_CONTRACT,
+  WHITELIST_TREASURY_CONTRACT
 } from "../../constants";
 import { task } from "hardhat/config";
 import {
@@ -14,6 +15,8 @@ import {
   IDeploymentAdapters,
   verifyProxy,
 } from "../../utils";
+
+import {TokenAbi} from "./TokenAbi"
 
 const contractName: string = CONTRACT_NAME.Token;
 const contractType = ContractType.Intializable;
@@ -116,4 +119,43 @@ task(VERIFY_DEPLOY_TOKEN_CONTRACT).setAction(async function (
   await verifyProxy(String(address), _hre);
 
   console.log(`Verified ${contractName} contract address `, address);
+});
+
+task(WHITELIST_TREASURY_CONTRACT).setAction(async function (
+  _taskArguments: TaskArguments,
+  _hre: HardhatRuntimeEnvironment
+) {
+  let env = process.env.ENV;
+  if (!env) env = DEFAULT_ENV;
+  const network = await _hre.getChainId();
+  console.log(`network`, network);
+  const ethers = _hre.ethers;
+  const rpc = process.env.SEPOLIA_URL;
+  console.log(`rpc`, rpc);
+  const provider = new ethers.JsonRpcProvider(rpc)
+
+  const signer = new ethers.Wallet(String(process.env.PRIVATE_KEY), provider);
+      
+
+
+  const contractAddress = "0xA4ea74A4880cF488D2361cbB6f065d2030F0bB7E";
+  // const spenderAddress = process.env.OWNER;
+  // for(let i=0; i< assets.length; i++)
+  // {
+  //   const tokenContract = new ethers.Contract(assets[i], approvalAbi, signer);
+  //   const tx = await tokenContract.approve(contractAddress, amounts[i]);
+  //   console.log(`Approval for ${assets[i]} transaction hash: ${tx.hash}`);
+  //   const receipt = await tx.wait();
+  //   console.log("Transaction confirmed", assets[i]);
+  // }
+
+  console.log(`contractAddress`, contractAddress);
+  const treasury = "0x2321362De9777fA03591b3eBDa28E589C1d8cb29"
+  const contract = new ethers.Contract(contractAddress,
+    TokenAbi, signer);
+
+  const tx = await contract.whiteListContract(treasury);
+  console.log(`transaction hash: ${tx.hash}`);
+  const receipt = await tx.wait();
+  console.log("Transaction confirmed",receipt);
 });

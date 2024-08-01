@@ -6,7 +6,10 @@ import {
   VERIFY_TREASURY_CONTRACT,
   EXCHANGE_TOKEN,
   INITIALIZE_TREASURY_CONTRACT,
-  GET_TREASURY_DETAILS
+  GET_TREASURY_DETAILS,
+  MINT_DRYP_WITH_USDT,
+  UPDATE_TREASURY_CONTRACT,
+  CALCULATE_REDEMPTION_VALUE
 } from "../../constants";
 import { task } from "hardhat/config";
 import {
@@ -19,10 +22,11 @@ import {
 } from "../../utils";
 import {TREASURY_TOKENS} from "./constants"
 import {TreasuryAbi} from "./TreasuryAbi"
-
+import {BigNumber} from "bignumber.js"
+import {PoolAbi} from "./PoolAbi"
 const contractName: string = CONTRACT_NAME.Treasury;
 const contractType = ContractType.Intializable;
-
+import {GetDollarValue} from "../../utils"
 interface tokenAsset {
   address: string;
   name: string;
@@ -163,8 +167,10 @@ task(INITIALIZE_TREASURY_CONTRACT).setAction(async function (
       console.log(`Price: ${price}`);
       console.log(`Amounts: ${amounts}`);
       console.log(`----------`);
+
   const approvalAbi = [
-    "function approve(address spender, uint256 amount) public returns (bool)"
+    "function approve(address spender, uint256 amount) public returns (bool)",
+    "function allowance(address owner, uint256 spender) public view returns (uint256)"
   ];
 
   const contractAddress = "0x2321362De9777fA03591b3eBDa28E589C1d8cb29";
@@ -217,10 +223,11 @@ task(GET_TREASURY_DETAILS).setAction(async function (
   const treasuryStarted = await treasuryContract.isTreasuryStarted();
   console.log("treasuryStarted", treasuryStarted);
   console.log("--------------")
-  const allAssets = await treasuryContract.getAllAssets();
+  const allAssets = await treasuryContract.getAllAssets(); // portfolio
   console.log("allAssets", allAssets);
   console.log("--------------")
   const allMintingAssets = await treasuryContract.getAllMinitingAssets();
+  // portfolio
   console.log("allMintingAssets", allMintingAssets);
   console.log("--------------")
   const tokens = TREASURY_TOKENS[network];
@@ -237,22 +244,57 @@ task(GET_TREASURY_DETAILS).setAction(async function (
     }
   }
   console.log("--------------")
+  
+  const redeemConfigA = [];
+  const unredeemConfigA = [];
+  const totalValueLocked = [];
+  const totalValueLockedInUsdt = [];
   for(let i=0; i< assets.length; i++)
   {
     const balance = await treasuryContractSigner.checkBalance(assets[i].address);
     console.log(`balance of ${assets[i].name} : ${balance}`)
+    totalValueLocked.push(balance);
     console.log("--------------");
     const balanceInUsdt = await treasuryContract._toUnitsPrice(assets[i].decimal, balance);
     console.log(`balance of ${assets[i].name} in Usdt: ${balanceInUsdt}`)
+    totalValueLockedInUsdt.push(balanceInUsdt);
     console.log("--------------");
     const redeemConfigs = await treasuryContract.getRedeemAssetConfig(assets[i].address);
     console.log("configs redeem", redeemConfigs);
+    redeemConfigA.push(redeemConfigs);
     console.log("--------------");
     const unredeemConfigs = await treasuryContract.getUnRedeemAssetConfig(assets[i].address);
     console.log("configs unredeem", unredeemConfigs);
+    unredeemConfigA.push(unredeemConfigs);
     console.log("--------------");
     console.log("--------------");
   }
+
+  let total = 0;
+  const usdtDec = 6;
+  console.log("--------------")
+  for(let i=0; i< allAssets.length; i++)
+    {
+      const assetAddress = allAssets[i];
+      if(!redeemConfigA[i][0])
+      {
+          continue;
+      }
+      let assetDecimal = redeemConfigA[i][1];
+      const totalAssetLocked = totalValueLocked[i];
+      if(usdtDec != assetDecimal)
+      {
+        const unitPriceInUsdt = totalValueLockedInUsdt[i];
+        total += unitPriceInUsdt*redeemConfigA[i][3];
+      }
+      else
+      {
+        const totalDollarValue = totalAssetLocked[i];
+        total += totalDollarValue;
+      }
+    }
+  console.log("total",total)
+  console.log("--------------")
   console.log("--------------")
 
   const totalValueLockedRd = await treasuryContract.totalValueLockedInRedeemBasket();
@@ -268,3 +310,121 @@ task(GET_TREASURY_DETAILS).setAction(async function (
   console.log("--------------")
 
 });
+
+task(MINT_DRYP_WITH_USDT).setAction(async function (
+  _taskArguments: TaskArguments,
+  _hre: HardhatRuntimeEnvironment
+) {
+  let env = process.env.ENV;
+  if (!env) env = DEFAULT_ENV;
+  const network = await _hre.getChainId();
+  console.log(`network`, network);
+  const ethers = _hre.ethers;
+  const rpc = process.env.SEPOLIA_URL;
+  console.log(`rpc`, rpc);
+  const provider = new ethers.JsonRpcProvider(rpc)
+
+  const _asset = EXCHANGE_TOKEN["11155111"].usdt.address;
+  const _amount = 10000000;
+  const _minimumDrypAmount = 10000000;
+  
+
+  const signer = new ethers.Wallet(String(process.env.PRIVATE_KEY), provider);
+  const _recipient = signer.address;
+  console.log(`_recipient`, _recipient);
+  const treasury = "0x2321362De9777fA03591b3eBDa28E589C1d8cb29"
+  console.log(`treasury`, treasury);
+  const contract = new ethers.Contract(treasury,
+    TreasuryAbi, signer);
+
+  const isTokenAllowedForMinting = await contract.isTokenAllowedForMiniting(_asset);
+  console.log(`isTokenAllowedForMinting`, isTokenAllowedForMinting);
+
+  const _getDrypDollar = await contract._getDrypDollar(_amount, _asset);
+  console.log(`_getDrypDollar`, _getDrypDollar);
+
+  const totalValueLockedInRevB = await contract.totalValueLockedInRevenue();
+  console.log("total Value Locked In Revenue before", totalValueLockedInRevB)
+  console.log("--------------")
+  const tx = await contract.mint(_asset, _amount, _minimumDrypAmount, _recipient);
+  console.log(`transaction hash: ${tx.hash}`);
+  const receipt = await tx.wait();
+  console.log("Transaction confirmed",receipt.status);
+  console.log("--------------")
+  const totalValueLockedInRevA = await contract.totalValueLockedInRevenue();
+  console.log("total Value Locked In Revenue before", totalValueLockedInRevA)
+});
+
+task("GET_DOLLAR_VALUE").setAction(async function (
+  _taskArguments: TaskArguments,
+  _hre: HardhatRuntimeEnvironment
+) {
+  let env = process.env.ENV;
+  if (!env) env = DEFAULT_ENV;
+  const network = await _hre.getChainId();
+  console.log(`network`, network);
+  const amount = await GetDollarValue("10000000","0xA4ea74A4880cF488D2361cbB6f065d2030F0bB7E",  _hre);
+  console.log("amount", amount)
+});
+
+
+task(CALCULATE_REDEMPTION_VALUE)
+  .setAction(async function (
+    _taskArguments: TaskArguments,
+    _hre: HardhatRuntimeEnvironment
+  ) {
+    let env = process.env.ENV;
+    if (!env) env = DEFAULT_ENV;
+    const rpc = process.env.SEPOLIA_URL;
+    const ethers = _hre.ethers;
+    const provider = new ethers.JsonRpcProvider(rpc);
+
+    const treasury = "0x2321362De9777fA03591b3eBDa28E589C1d8cb29"
+    console.log("treasury", treasury)
+    const signer = new ethers.Wallet(String(process.env.PRIVATE_KEY), provider);
+    const treasuryContract = new ethers.Contract(treasury,
+      TreasuryAbi, signer);
+      
+    const _allAssets = await treasuryContract.getAllAssets();
+    console.log("_allAssets", _allAssets)
+    const amount = await GetDollarValue("10000000000000000000","0xA4ea74A4880cF488D2361cbB6f065d2030F0bB7E", _hre);
+    console.log("amount", amount)
+    
+    const dollarValue = new BigNumber(amount).div(10**6);
+
+    console.log("dollarValue", dollarValue.toString())
+    const assetCount = _allAssets.length;
+    let outputs: Array<string> = [];
+    let totalUsdtValue = new BigNumber(0);
+
+    let redeemAsset = [];
+
+    for (let i = 0; i < assetCount; ++i) {
+      let assetAddr = _allAssets[i];
+      const redeemConfig = await treasuryContract.getRedeemAssetConfig(assetAddr);
+      const redeemConfigs = {
+        isSupported: redeemConfig[0],
+        decimal:redeemConfig[1],
+        amount: redeemConfig[4],
+        priceInUsdt: redeemConfig[3],
+        allotatedPercentange: redeemConfig[2]
+      }
+      redeemAsset.push(redeemConfigs)
+    }
+    let totalTreasuryValueInUSDT = new BigNumber(0);
+
+    redeemAsset.forEach(token => {
+      let tokenValueInUSD = new BigNumber(Number(token.amount)).mul(token.priceInUsdt).div(10 ** Number(token.decimal));
+      totalTreasuryValueInUSDT = totalTreasuryValueInUSDT.plus(tokenValueInUSD);
+    });
+
+    console.log("totalTreasuryValueInUSDT", totalTreasuryValueInUSDT.toFixed(0).toString());
+    console.log("dollarValue", dollarValue.toString());
+    redeemAsset.forEach(token => {
+      let tokenShareInUSDT = dollarValue.mul(Number(token.allotatedPercentange)/100);
+      let tokenAmount = tokenShareInUSDT.mul(10 ** Number(token.decimal)).div(token.priceInUsdt);
+      
+      outputs.push(tokenAmount.toFixed(0).toString());
+    });
+    console.log("outputs", outputs);
+  });
